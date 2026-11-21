@@ -62,9 +62,6 @@ window.__ModuleLoader__.load({
       actionReveal: 'Reveal in folder',
       actionCopy: 'Copy path',
       actionSession: 'Open the conversation',
-      actionPreview: 'Preview in DSH',
-      previewUnavailable: 'This file type cannot be previewed inside DSH.',
-      previewFailed: 'Could not open the in-app preview.',
       copied: 'Path copied',
       copyFailed: 'Clipboard unavailable in this browser context.',
       opened: 'Opened',
@@ -113,9 +110,6 @@ window.__ModuleLoader__.load({
       actionReveal: '打开所在文件夹',
       actionCopy: '复制路径',
       actionSession: '跳到该对话',
-      actionPreview: '在 DSH 内预览',
-      previewUnavailable: '该文件类型暂不支持在 DSH 内预览。',
-      previewFailed: '无法打开内置预览。',
       copied: '已复制路径',
       copyFailed: '当前浏览器环境不允许访问剪贴板。',
       opened: '已打开',
@@ -376,13 +370,6 @@ window.__ModuleLoader__.load({
       ])
     }
 
-    function PreviewGlyph() {
-      return h('svg', glyph(), [
-        h('path', { key: 'a', d: 'M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z' }),
-        h('circle', { key: 'b', cx: 12, cy: 12, r: 2.6 }),
-      ])
-    }
-
     function SessionGlyph() {
       return h('svg', glyph(), [
         h('path', { key: 'a', d: 'M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z' }),
@@ -450,11 +437,6 @@ window.__ModuleLoader__.load({
       const sessionLabel = item.sessionTitle === undefined
         ? t('actionSession')
         : `${t('actionSession')} · ${t('sessionLabel')} ${item.sessionTitle}${item.sessionSubagent === true ? ` (${t('subagentNote')})` : ''}`
-      const previewable = isPreviewable(item.ext)
-      const previewTitle = gone
-        ? t('goneTitle')
-        : previewable ? t('actionPreview') : t('previewUnavailable')
-
       return h('div', { className: `at-row is-${item.status}`, title: rowTitle }, [
         h('div', { className: 'at-ext', key: 'ext' }, item.ext === '' ? 'file' : item.ext),
         h('div', { className: 'at-row-main', key: 'main' }, [
@@ -470,13 +452,6 @@ window.__ModuleLoader__.load({
           h('span', { key: 'tm', className: 'at-time' }, relativeTime(item.time, t)),
         ]),
         h('div', { className: 'at-actions', key: 'actions' }, [
-          h(ActionButton, {
-            key: 'preview',
-            label: t('actionPreview'),
-            title: previewTitle,
-            disabled: gone || !previewable,
-            onPress: () => onAction(item, 'preview'),
-          }, h(PreviewGlyph, {})),
           h(ActionButton, {
             key: 'open',
             label: t('actionOpen'),
@@ -512,8 +487,7 @@ window.__ModuleLoader__.load({
     /** The panel: toolbar, day-grouped timeline, actions, empty and error states. */
     function ArtifactTimelinePanel(props) {
       const t = props.t
-      const openSession = props.openSession
-      const openPreview = props.openPreview
+      const revealArtifact = props.revealArtifact
       const [state, setState] = useState({ phase: 'loading', value: null, error: '' })
       const [filter, setFilter] = useState('all')
       const [query, setQuery] = useState('')
@@ -628,22 +602,13 @@ window.__ModuleLoader__.load({
       const onAction = useCallback((item, action) => {
         const key = `${item.sessionId}:${item.rid}`
         if (action === 'session') {
-          // Synchronous by design: openSession selects the Session and reveals
-          // the conversation panel; a dead Session throws right here.
+          // Synchronous by design: the conversation is selected, the line that
+          // produced the artifact is brought into view, and the file opens in
+          // the right Sidebar; a dead Session throws right here.
           try {
-            openSession(item)
+            revealArtifact(item)
           } catch (error) {
             flash(error instanceof Error && error.message !== '' ? error.message : t('noSession'), 'is-err')
-          }
-          return
-        }
-        if (action === 'preview') {
-          // Synchronous: the right Sidebar opens the address; a missing
-          // preview service or a rejected address throws right here.
-          try {
-            openPreview(item)
-          } catch (error) {
-            flash(error instanceof Error && error.message !== '' ? error.message : t('previewFailed'), 'is-err')
           }
           return
         }
@@ -691,7 +656,7 @@ window.__ModuleLoader__.load({
               return next
             })
           })
-      }, [openSession, openPreview, flash, t])
+      }, [revealArtifact, flash, t])
 
       const chips = [
         { id: 'all', label: t('filterAll'), count: items.length, color: null },
@@ -781,7 +746,9 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ['slots', 'locale'],
+      // `sidebarRight` is a reflect-provided service: declaring it here is
+      // what binds ctx.sidebarRight (ctx.get cannot resolve reflect services).
+      inject: ['slots', 'locale', 'sidebarRight'],
       /** Test seam: the address builder and the preview gate, pure and closed. */
       _internals: { fileAddressFor, isPreviewable },
       apply(ctx) {
@@ -802,36 +769,8 @@ window.__ModuleLoader__.load({
          * thrown error the panel flashes. Subagent logs open as their own
          * Session, which is exactly what the row recorded.
          */
-        /**
-         * Open one artifact inside DSH: the right Sidebar document preview at
-         * its `dsh-resource://file/…` address — the in-app counterpart of the
-         * desktop open. The Sidebar service is a soft lookup, so a profile
-         * without that seat reports a failure instead of deactivating.
-         */
-        const openPreview = (item) => {
-          let sidebarRight
-          try {
-            sidebarRight = typeof ctx.get === 'function' ? ctx.get('sidebarRight') : undefined
-          } catch {
-            sidebarRight = undefined
-          }
-          if (sidebarRight === undefined) {
-            // A context without the optional-service lookup still exposes the
-            // seat as a property once the right Sidebar is mounted.
-            try { sidebarRight = ctx.sidebarRight } catch { sidebarRight = undefined }
-          }
-          if (sidebarRight === undefined || sidebarRight === null
-            || typeof sidebarRight.openResourceIn !== 'function') {
-            throw new Error(t('previewFailed'))
-          }
-          sidebarRight.openResourceIn(
-            item.sessionId,
-            fileAddressFor(item.sessionId, item.path),
-            { destination: 'sidebar' },
-          )
-        }
-
-        const openSession = (item) => {
+        /** Select a conversation; throws when the Workspace seat is absent. */
+        const selectSession = (item) => {
           const uiWorkspace = ctx.get('uiWorkspace')
           if (uiWorkspace === undefined || typeof uiWorkspace.openSession !== 'function') {
             throw new Error(t('noSession'))
@@ -842,12 +781,106 @@ window.__ModuleLoader__.load({
           uiWorkspace.openSession(item.sessionId)
         }
 
+        /**
+         * Bring the conversation row that mentions this artifact into view.
+         *
+         * The Conversation exposes no "scroll to this event" call — its
+         * viewport class is package-internal — so this reads the same anchors
+         * the viewport itself scrolls by: rows carrying `data-chat-turn` inside
+         * `[data-conversation-scroll]`. It matches on the file name, and older
+         * content that is not loaded yet simply does not match: the jump still
+         * lands, and the view is never scrolled to a guess.
+         */
+        const scrollToOccurrence = (item) => {
+          if (typeof document === 'undefined') return
+          if (typeof item.name !== 'string' || item.name === '') return
+          let rows
+          try {
+            rows = document.querySelectorAll('[data-conversation-scroll] [data-chat-turn]')
+          } catch {
+            return
+          }
+          for (const row of rows) {
+            const text = row.textContent
+            if (text !== null && text.indexOf(item.name) !== -1) {
+              try {
+                row.scrollIntoView({ block: 'center' })
+              } catch {
+                // A layout-only nicety; a failed scroll changes no content.
+              }
+              return
+            }
+          }
+        }
+
+        /**
+         * One gesture on the conversation action: show that conversation, put
+         * the line that produced the artifact in view, and open the file in the
+         * right Sidebar's document preview at its `dsh-resource://file/…`
+         * address. The preview is best-effort — a type the document preview
+         * cannot render, a missing Sidebar, or a gone file leaves the jump
+         * intact instead of failing the whole gesture.
+         */
+        const revealArtifact = (item) => {
+          const sidebarRight = ctx.sidebarRight
+          const mountedSession = () => {
+            try {
+              return typeof sidebarRight?.mounted?.getSnapshot === 'function'
+                ? sidebarRight.mounted.getSnapshot()
+                : undefined
+            } catch {
+              return undefined
+            }
+          }
+          // A preview is read-only and the address names its own Session, so it
+          // opens beside whatever conversation is on screen.
+          const openPreview = () => {
+            if (item.status === 'missing' || !isPreviewable(item.ext)) return
+            if (sidebarRight === undefined || sidebarRight === null
+              || typeof sidebarRight.openResource !== 'function') return
+            try {
+              sidebarRight.openResource(
+                fileAddressFor(item.sessionId, item.path),
+                { destination: 'sidebar' },
+              )
+            } catch {
+              // A rejected address or an unmounted pane changes nothing here.
+            }
+          }
+          const settle = () => {
+            scrollToOccurrence(item)
+            openPreview()
+          }
+          if (mountedSession() === item.sessionId) {
+            // Already here: only the view and the pane change, no navigation.
+            settle()
+            return
+          }
+          selectSession(item)
+          // The tab domain and the view both need the arriving Session mounted,
+          // which settles a render after the selection. Bounded, so a Session
+          // that never mounts still scrolls instead of hanging on.
+          let elapsed = 0
+          const timer = setInterval(() => {
+            elapsed += 100
+            if (mountedSession() === item.sessionId) {
+              clearInterval(timer)
+              setTimeout(settle, 120)
+              return
+            }
+            if (elapsed >= 3000) {
+              clearInterval(timer)
+              setTimeout(() => scrollToOccurrence(item), 200)
+            }
+          }, 100)
+        }
+
         // The panel itself, addressed by the sidebar row below.
         ctx.slots.inject('main', () => ctx.slots.register({
           name: 'main',
           key: PANEL_ID,
           locale: LOCALE_NS,
-          inject: () => ({ openSession, openPreview }),
+          inject: () => ({ revealArtifact }),
         }, ArtifactTimelinePanel))
 
         // The left-sidebar row. The sidebar owns the button, its label, and the
