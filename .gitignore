@@ -1,0 +1,18 @@
+# Node / pnpm
+node_modules/
+*.tgz
+.pnpm-store/
+
+# DSH session & local state — never commit conversation logs
+.dsh/
+*.jsonl
+*.zstd
+
+# Logs & temp
+*.log
+*.tmp
+__pycache__/
+*.pyc
+
+# Local-only verification output
+.dsh-probe/
