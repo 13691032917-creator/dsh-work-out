@@ -1,6 +1,6 @@
 {
   "name": "dsh-work-out",
-  "version": "1.1.0",
+  "version": "1.1.4",
   "description": "Artifact timeline: every file deliverable produced across all conversations, in one time-ordered list, with deleted and changed files marked. 汇总所有对话产出的文件成一条时间线，标出交付后被更改或已删除的文件。",
   "license": "MIT",
   "type": "module",
