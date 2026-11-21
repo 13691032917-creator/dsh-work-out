@@ -1,0 +1,7 @@
+- insert:
+    - id: artifact-timeline
+      name: 'dsh-work-out'
+      config:
+        includeWritten: true
+        statusTtlMs: 15000
+        scanTtlMs: 60000
