@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="Artifact timeline">
+  <defs>
+    <linearGradient id="atDocFace" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7fafc"/>
+      <stop offset="1" stop-color="#dde6ef"/>
+    </linearGradient>
+  </defs>
+  <!-- Back sheet, offset to read as a stack -->
+  <path d="M12 5.5h11.5L30 12v18.5H12z" fill="#b9c8d8"/>
+  <!-- Front sheet -->
+  <path d="M6 10h11.5L24 16.5V30H6z" fill="url(#atDocFace)" stroke="#7d93aa" stroke-width="1.1" stroke-linejoin="round"/>
+  <!-- Folded corner -->
+  <path d="M17.5 10v6.5H24" fill="#a9bccf" stroke="#7d93aa" stroke-width="1.1" stroke-linejoin="round"/>
+  <!-- Text lines -->
+  <path d="M9.6 20.2h10.4M9.6 23.2h10.4M9.6 26.2h6.6" stroke="#8fa5bb" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Timeline rail: kept / changed / deleted -->
+  <path d="M29.5 19.5v11" stroke="#3f9d6b" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="29.5" cy="20" r="2.1" fill="#3f9d6b"/>
+  <circle cx="29.5" cy="25" r="2.1" fill="#d79a24"/>
+  <circle cx="29.5" cy="30" r="2.1" fill="#cf4f47"/>
+</svg>
