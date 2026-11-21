@@ -41,16 +41,23 @@ deletion shows up without re-reading any event log.
 
 Hovering or keyboard-focusing a row reveals its actions:
 
-- **Preview** — open the file inside DSH, in the right sidebar's document preview
-  (the `dsh-resource://file/session/<id>/<path>` address the Host resolves
-  against that conversation's workspace). Markdown, HTML, PDF, images, Office
-  documents (`.doc`/`.docx`/`.ppt`/`.pptx`), spreadsheets
-  (`.xlsx`/`.xls`/`.csv`/`.tsv`) and plain text render there; archives, media and
-  the other binary containers are disabled with the reason in the tooltip.
 - **Open** — hand the file to the Host desktop's default application.
 - **Reveal** — show the file in Explorer / Finder.
 - **Copy path** — copy the full absolute path.
-- **Open the conversation** — jump to the conversation that produced it.
+- **Open the conversation** — one gesture with three effects: show the
+  conversation that produced the artifact, scroll the row that mentions it into
+  view, and open the file in the right sidebar's document preview (the
+  `dsh-resource://file/session/<id>/<path>` address the Host resolves against
+  that conversation's workspace).
+
+The preview covers everything DSH's own document preview renders — Markdown,
+HTML, PDF, images, Office documents (`.doc`/`.docx`/`.ppt`/`.pptx`),
+spreadsheets (`.xlsx`/`.xls`/`.csv`/`.tsv`) and plain text. A type it cannot
+render, a deleted file, or a profile without the right Sidebar leaves the jump
+intact rather than failing the gesture. Scrolling is best-effort: the
+Conversation has no public "scroll to this event" call, so the plugin matches
+the file name inside the conversation rows the viewport has loaded — an
+occurrence further back than the loaded history simply is not scrolled to.
 
 Open and reveal re-verify the path through the Host filesystem before the
 desktop sees it — the same chain the built-in delivery cards use — and are
